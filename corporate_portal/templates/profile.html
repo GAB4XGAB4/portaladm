@@ -1,0 +1,267 @@
+{% extends 'base.html' %}
+
+{% block title %}Meu Perfil - PsicoNote{% endblock %}
+
+{% block content %}
+<div id="profile-app"></div>
+
+<!-- JSON Script seguro para os dados iniciais do React -->
+<script id="user-data" type="application/json">
+    {{ user_data|safe }}
+</script>
+
+<script type="text/babel">
+const { useState, useEffect, useRef } = React;
+
+function ProfileForm() {
+    const [formData, setFormData] = useState({});
+    const [previewImage, setPreviewImage] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
+    const [message, setMessage] = useState({ type: '', text: '' });
+    const fileInputRef = useRef(null);
+
+    // Carregar dados no componente
+    useEffect(() => {
+        try {
+            const dataStr = document.getElementById('user-data').textContent;
+            const data = JSON.parse(dataStr);
+            setFormData({
+                first_name: data.first_name || '',
+                last_name: data.last_name || '',
+                email: data.email || '',
+                telefone: data.telefone || '',
+                endereco: data.endereco || '',
+                numero: data.numero || '',
+                cep: data.cep || '',
+                estado: data.estado || '',
+            });
+            if (data.avatar_url) {
+                setPreviewImage(data.avatar_url);
+            }
+        } catch (e) {
+            console.error("Erro ao carregar dados do usuário", e);
+        }
+    }, []);
+
+    const getCookie = (name) => {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    };
+
+    const handleChange = (e) => {
+        const { name, value } = e.target;
+        setFormData(prev => ({ ...prev, [name]: value }));
+    };
+
+    const handleImageChange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            // Mostrar um preview instantâneo na tela
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setPreviewImage(reader.result);
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setIsLoading(true);
+        setMessage({ type: '', text: '' });
+
+        // Como temos imagem, precisamos usar o FormData (multipart/form-data)
+        const submitData = new FormData();
+        
+        // Adicionar campos de texto
+        Object.keys(formData).forEach(key => {
+            submitData.append(key, formData[key]);
+        });
+        
+        // Adicionar arquivo de imagem se selecionado
+        if (fileInputRef.current && fileInputRef.current.files[0]) {
+            submitData.append('avatar', fileInputRef.current.files[0]);
+        }
+
+        try {
+            const response = await fetch('/profile/', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: submitData
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                setMessage({ type: 'success', text: 'Seu perfil foi salvo com sucesso!' });
+                if (data.avatar_url) {
+                    setPreviewImage(data.avatar_url);
+                    // Opcional: fazer um reload leve para que o header do site pegue a nova foto
+                    setTimeout(() => window.location.reload(), 1500);
+                }
+            } else {
+                setMessage({ type: 'error', text: data.message || 'Erro ao salvar os dados.' });
+            }
+        } catch (error) {
+            setMessage({ type: 'error', text: 'Erro de conexão com o servidor.' });
+        } finally {
+            setIsLoading(false);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    };
+
+    return (
+        <div className="max-w-5xl mx-auto animate-fade-in space-y-6">
+            <div className="flex items-center gap-4 mb-8">
+                <div className="w-12 h-12 rounded-lg flex items-center justify-center text-white shadow-lg" style={ { background: 'linear-gradient(135deg, var(--color-purple), var(--color-deep-purple))' } }>
+                    <i className="fas fa-user-edit text-xl"></i>
+                </div>
+                <div>
+                    <h2 className="text-3xl font-extrabold" style={ { color: 'var(--color-text)' } }>Configurações de <span className="text-gradient">Perfil</span></h2>
+                    <p className="text-gray-500">Atualize suas informações pessoais e foto de apresentação.</p>
+                </div>
+            </div>
+
+            {message.text && (
+                <div className={`border-l-4 p-4 rounded-lg shadow-sm ${message.type === 'success' ? 'bg-green-50 border-green-500 text-green-800' : 'bg-red-50 border-red-600 text-red-700'}`}>
+                    <div className="flex items-center">
+                        <i className={`fas ${message.type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'} mr-2`}></i>
+                        <span className="font-medium">{message.text}</span>
+                    </div>
+                </div>
+            )}
+
+            <form onSubmit={handleSubmit}>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    
+                    {/* Coluna Esquerda - Avatar e Ações Rápidas */}
+                    <div className="md:col-span-1 space-y-6">
+                        <div className="card-custom p-6 text-center flex flex-col items-center">
+                            <div className="relative group cursor-pointer mb-4">
+                                <div 
+                                    className="w-32 h-32 rounded-full overflow-hidden border-4 flex items-center justify-center bg-gray-100 shadow-md transition-transform group-hover:scale-105" 
+                                    style={ { borderColor: 'var(--color-lilac)' } }
+                                    onClick={() => fileInputRef.current.click()}
+                                >
+                                    {previewImage ? (
+                                        <img src={previewImage} alt="Preview Avatar" className="w-full h-full object-cover" />
+                                    ) : (
+                                        <i className="fas fa-user text-5xl text-gray-400"></i>
+                                    )}
+                                </div>
+                                <div 
+                                    className="absolute bottom-0 right-0 w-10 h-10 rounded-full flex items-center justify-center text-white shadow-lg transform transition-transform group-hover:scale-110" 
+                                    style={ { background: 'var(--color-purple)' } }
+                                    onClick={() => fileInputRef.current.click()}
+                                >
+                                    <i className="fas fa-camera"></i>
+                                </div>
+                            </div>
+                            
+                            <h3 className="font-bold text-lg">{formData.first_name || 'Usuário'}</h3>
+                            <p className="text-sm text-gray-500 mb-4">{formData.email || 'Email não cadastrado'}</p>
+                            
+                            <input 
+                                type="file" 
+                                accept="image/*" 
+                                className="hidden" 
+                                ref={fileInputRef} 
+                                onChange={handleImageChange}
+                            />
+                            
+                            <button type="button" onClick={() => fileInputRef.current.click()} className="text-sm font-semibold transition-colors" style={ { color: 'var(--color-purple)' } }>
+                                Alterar Foto
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Coluna Direita - Formulário de Dados */}
+                    <div className="md:col-span-2 space-y-6">
+                        <div className="card-custom p-8 space-y-6">
+                            
+                            <h3 className="text-xl font-bold flex items-center gap-2 mb-6" style={ { color: 'var(--color-deep-purple)' } }>
+                                <i className="fas fa-address-card text-gray-400"></i> Informações Pessoais
+                            </h3>
+                            
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                    <label className="block text-sm font-semibold text-gray-600 mb-2">Nome</label>
+                                    <input type="text" name="first_name" value={formData.first_name} onChange={handleChange} className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:border-purple-600 outline-none transition-colors" placeholder="Seu nome" />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-semibold text-gray-600 mb-2">Sobrenome</label>
+                                    <input type="text" name="last_name" value={formData.last_name} onChange={handleChange} className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:border-purple-600 outline-none transition-colors" placeholder="Seu sobrenome" />
+                                </div>
+                                <div className="md:col-span-2">
+                                    <label className="block text-sm font-semibold text-gray-600 mb-2">E-mail</label>
+                                    <input type="email" name="email" value={formData.email} onChange={handleChange} className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:border-purple-600 outline-none transition-colors" placeholder="seu.email@example.com" />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-semibold text-gray-600 mb-2">Telefone</label>
+                                    <input type="tel" name="telefone" value={formData.telefone} onChange={handleChange} className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:border-purple-600 outline-none transition-colors" placeholder="(00) 00000-0000" />
+                                </div>
+                            </div>
+                            
+                            <hr className="my-8 border-gray-100" />
+                            
+                            <h3 className="text-xl font-bold flex items-center gap-2 mb-6" style={ { color: 'var(--color-deep-purple)' } }>
+                                <i className="fas fa-map-marker-alt text-gray-400"></i> Endereço
+                            </h3>
+                            
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                <div className="md:col-span-2">
+                                    <label className="block text-sm font-semibold text-gray-600 mb-2">Logradouro</label>
+                                    <input type="text" name="endereco" value={formData.endereco} onChange={handleChange} className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:border-purple-600 outline-none transition-colors" placeholder="Rua, Avenida, etc..." />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-semibold text-gray-600 mb-2">Número</label>
+                                    <input type="text" name="numero" value={formData.numero} onChange={handleChange} className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:border-purple-600 outline-none transition-colors" placeholder="Ex: 123" />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-semibold text-gray-600 mb-2">CEP</label>
+                                    <input type="text" name="cep" value={formData.cep} onChange={handleChange} className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:border-purple-600 outline-none transition-colors" placeholder="00000-000" />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-semibold text-gray-600 mb-2">Estado</label>
+                                    <input type="text" name="estado" value={formData.estado} onChange={handleChange} className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:border-purple-600 outline-none transition-colors" placeholder="SP, RJ, MG..." />
+                                </div>
+                            </div>
+
+                        </div>
+                        
+                        <div className="flex justify-end">
+                            <button
+                                type="submit"
+                                disabled={isLoading}
+                                className="btn-primary px-8 py-3 rounded-xl font-bold shadow-lg flex items-center justify-center gap-2 disabled:opacity-70 disabled:transform-none min-w-[200px]"
+                            >
+                                {isLoading ? (
+                                    <i className="fas fa-spinner fa-spin"></i>
+                                ) : (
+                                    <i className="fas fa-save"></i>
+                                )}
+                                {isLoading ? 'Salvando...' : 'Salvar Alterações'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    );
+}
+
+ReactDOM.render(<ProfileForm />, document.getElementById('profile-app'));
+</script>
+{% endblock %}

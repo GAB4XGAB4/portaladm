@@ -13,11 +13,55 @@ function LoginForm() {
     const [senha, setSenha] = useState('');
     const [rememberMe, setRememberMe] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
+    const [errorMsg, setErrorMsg] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
 
-    const handleSubmit = (e) => {
+    // Pegar o token CSRF do Django que está nos cookies para enviar no POST
+    const getCookie = (name) => {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    };
+
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        console.log('Login:', { email, senha, rememberMe });
-        alert('Sistema de autenticação em desenvolvimento...');
+        setIsLoading(true);
+        setErrorMsg('');
+
+        try {
+            const response = await fetch('/login/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify({ email, senha, rememberMe })
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                // Login com sucesso!
+                console.log('Login efetuado', data.user);
+                // Redireciona para home (depois podemos redirecionar pro painel de analytics dependendo do perfil)
+                window.location.href = '/'; 
+            } else {
+                setErrorMsg(data.message || 'Erro ao realizar login. Tente novamente.');
+            }
+        } catch (error) {
+            setErrorMsg('Erro de conexão com o servidor.');
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     return (
@@ -38,6 +82,17 @@ function LoginForm() {
 
                     {/* Formulário */}
                     <form onSubmit={handleSubmit} className="p-8 space-y-6">
+                        
+                        {/* Mensagem de Erro (Mostra somente se falhar) */}
+                        {errorMsg && (
+                            <div className="bg-red-50 border-l-4 border-red-600 text-red-700 px-4 py-3 rounded-lg shadow-sm" role="alert">
+                                <div className="flex items-center">
+                                    <i className="fas fa-exclamation-circle mr-2"></i>
+                                    <span className="block sm:inline font-medium">{errorMsg}</span>
+                                </div>
+                            </div>
+                        )}
+
                         {/* Email */}
                         <div>
                             <label className="block text-sm font-medium text-purple-300 mb-2">
@@ -96,10 +151,15 @@ function LoginForm() {
                         {/* Botão de Login */}
                         <button
                             type="submit"
-                            className="btn-login w-full py-3 px-4 font-bold rounded-lg hover:shadow-lg transition transform hover:scale-[1.02] flex items-center justify-center gap-2"
+                            disabled={isLoading}
+                            className="btn-login w-full py-3 px-4 font-bold rounded-lg hover:shadow-lg transition transform hover:scale-[1.02] flex items-center justify-center gap-2 disabled:opacity-70 disabled:transform-none"
                         >
-                            <i className="fas fa-sign-in-alt"></i>
-                            Entrar
+                            {isLoading ? (
+                                <i className="fas fa-spinner fa-spin"></i>
+                            ) : (
+                                <i className="fas fa-sign-in-alt"></i>
+                            )}
+                            {isLoading ? 'Entrando...' : 'Entrar'}
                         </button>
 
                         {/* Recuperação de Senha */}

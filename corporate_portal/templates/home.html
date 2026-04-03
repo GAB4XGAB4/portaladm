@@ -3,12 +3,497 @@
 {% block title %}Home - PsicoNote{% endblock %}
 
 {% block content %}
-<div id="carrossel-app"></div>
+<div id="home-app"></div>
 
 <script type="text/babel">
-const { useState, useEffect } = React;
+const { useState, useEffect, useRef } = React;
 
-function Carrossel() {
+function App() {
+    const isAuthenticated = {{ request.user.is_authenticated|yesno:"true,false" }};
+    const userFirstName = "{{ request.user.first_name|default:request.user.username|escapejs }}";
+    
+    // Se o usuário NÃO estiver logado, mostra o carrossel normal da landing page
+    if (!isAuthenticated) {
+        return <LandingCarousel />;
+    }
+
+    // Se estiver logado, mostra o Dashboard
+    return <Dashboard userFirstName={userFirstName} />;
+}
+
+// ==========================================
+// COMPONENTE DO DASHBOARD (LOGADO)
+// ==========================================
+function Dashboard({ userFirstName }) {
+    // Referência de stories (Roleta de Opções)
+    const stories = [
+        { id: 1, title: 'Nova Anotação', icon: 'fa-plus-circle', color: '#7014C2' },
+        { id: 2, title: 'Meu Humor', icon: 'fa-smile-beam', color: '#A555EC' },
+        { id: 3, title: 'Exercícios', icon: 'fa-dumbbell', color: '#7400AE' },
+        { id: 4, title: 'Meditação', icon: 'fa-spa', color: '#7014C2' },
+        { id: 5, title: 'Conquistas', icon: 'fa-trophy', color: '#A555EC' },
+        { id: 6, title: 'Comunidade', icon: 'fa-users', color: '#7400AE' },
+        { id: 7, title: 'Relatórios', icon: 'fa-chart-pie', color: '#7014C2' },
+        { id: 8, title: 'Suporte', icon: 'fa-headset', color: '#A555EC' },
+    ];
+
+    // Gerador simples de calendário do mês atual
+    const hoje = new Date();
+    const hojeStr = hoje.toISOString().split('T')[0];
+    
+    // Estados do Humor e Gráfico
+    const [showMoodModal, setShowMoodModal] = useState(false);
+    const [moodForm, setMoodForm] = useState({ data: hojeStr, nivel: 3, anotacao: '' });
+    const [moodStatus, setMoodStatus] = useState({ loading: false, msg: '', type: '' });
+    const [chartMode, setChartMode] = useState(false);
+    
+    // Estados das Datas do Gráfico (Padrão: Últimos 7 dias)
+    const seteDiasAtras = new Date();
+    seteDiasAtras.setDate(hoje.getDate() - 6);
+    const [chartDates, setChartDates] = useState({ start: seteDiasAtras.toISOString().split('T')[0], end: hojeStr });
+    const [chartData, setChartData] = useState([]);
+    
+    // Referência do Gráfico
+    const chartRef = useRef(null);
+    const canvasRef = useRef(null);
+
+    // Fechar Modal
+    const closeMoodModal = () => {
+        setShowMoodModal(false);
+        setMoodStatus({ loading: false, msg: '', type: '' });
+    };
+
+    // Obter CSRF Token
+    const getCookie = (name) => {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    };
+
+    // Salvar Humor
+    const saveMood = async (e) => {
+        e.preventDefault();
+        setMoodStatus({ loading: true, msg: '', type: '' });
+
+        if (moodForm.data > hojeStr) {
+            setMoodStatus({ loading: false, msg: 'Você não pode registrar humores no futuro.', type: 'error' });
+            return;
+        }
+
+        try {
+            const response = await fetch('/api/humor/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify(moodForm)
+            });
+            const data = await response.json();
+            
+            if (response.ok) {
+                setMoodStatus({ loading: false, msg: 'Humor registrado com sucesso!', type: 'success' });
+                if (chartMode) fetchChartData(); // Atualiza o gráfico se estiver aberto
+                setTimeout(() => closeMoodModal(), 2000);
+            } else {
+                setMoodStatus({ loading: false, msg: data.message, type: 'error' });
+            }
+        } catch (error) {
+            setMoodStatus({ loading: false, msg: 'Erro de conexão.', type: 'error' });
+        }
+    };
+
+    // Buscar dados do Gráfico
+    const fetchChartData = async () => {
+        if (chartDates.start > chartDates.end) {
+            alert('A data de início não pode ser maior que a data final.');
+            return;
+        }
+        if (chartDates.end > hojeStr) {
+            alert('A data final não pode ser no futuro.');
+            return;
+        }
+
+        try {
+            const response = await fetch(`/api/humor/?start=${chartDates.start}&end=${chartDates.end}`);
+            const result = await response.json();
+            if (response.ok) {
+                setChartData(result.data);
+            }
+        } catch (e) {
+            console.error('Erro ao buscar dados do gráfico', e);
+        }
+    };
+
+    // Renderizar Gráfico quando os dados mudarem
+    useEffect(() => {
+        if (chartMode && chartData.length >= 0 && canvasRef.current) {
+            if (chartRef.current) {
+                chartRef.current.destroy(); // Destroi o anterior
+            }
+            
+            const ctx = canvasRef.current.getContext('2d');
+            
+            // Mapear dados
+            const labels = chartData.map(d => {
+                const parts = d.data.split('-');
+                return `${parts[2]}/${parts[1]}`;
+            });
+            const dataPoints = chartData.map(d => d.nivel);
+
+            chartRef.current = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Nível de Humor',
+                        data: dataPoints,
+                        borderColor: '#7014C2', // purple
+                        backgroundColor: 'rgba(165, 85, 236, 0.2)', // light-purple
+                        borderWidth: 3,
+                        pointBackgroundColor: '#7400AE',
+                        pointRadius: 5,
+                        pointHoverRadius: 7,
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            min: 1,
+                            max: 5,
+                            ticks: {
+                                stepSize: 1,
+                                callback: function(value) {
+                                    const humores = {1: 'Péssimo', 2: 'Ruim', 3: 'Neutro', 4: 'Bom', 5: 'Excelente'};
+                                    return humores[value];
+                                }
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const r = chartData[context.dataIndex];
+                                    let label = r.humor_display;
+                                    if (r.anotacao) label += ` - "${r.anotacao}"`;
+                                    return label;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    }, [chartData, chartMode]);
+
+    // Carrega dados iniciais ao abrir o gráfico
+    useEffect(() => {
+        if (chartMode) fetchChartData();
+    }, [chartMode]);
+
+    const diasNoMes = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0).getDate();
+    const primeiroDia = new Date(hoje.getFullYear(), hoje.getMonth(), 1).getDay();
+    const diasCalendario = Array.from({ length: 42 }, (_, i) => {
+        const dia = i - primeiroDia + 1;
+        return dia > 0 && dia <= diasNoMes ? dia : null;
+    });
+    const meses = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+
+    return (
+        <div className="space-y-8 animate-fade-in">
+            
+            {/* Roleta de Opções (Estilo Stories Instagram/Facebook) */}
+            <div className="w-full overflow-x-auto pb-4 pt-2" style={ { scrollbarWidth: 'none', msOverflowStyle: 'none' } }>
+                <div className="flex gap-6 min-w-max px-2">
+                    {stories.map(story => (
+                        <div key={story.id} className="flex flex-col items-center gap-2 cursor-pointer group" onClick={() => {
+                            if (story.title === 'Meu Humor') setShowMoodModal(true);
+                            if (story.title === 'Relatórios') setChartMode(true);
+                        }}>
+                            <div 
+                                className="w-16 h-16 rounded-full flex items-center justify-center text-white text-2xl shadow-md transition-transform duration-300 group-hover:scale-110 relative"
+                                style={ { background: `linear-gradient(135deg, ${story.color}, var(--color-deep-purple))` } }
+                            >
+                                <div className="absolute inset-0 rounded-full border-2 border-white scale-105 opacity-0 group-hover:opacity-100 transition-opacity" style={ { borderColor: 'var(--color-purple)' } }></div>
+                                <i className={`fas ${story.icon}`}></i>
+                            </div>
+                            <span className="text-xs font-semibold text-gray-600 group-hover:text-purple-700 transition-colors">{story.title}</span>
+                        </div>
+                    ))}
+                </div>
+            </div>
+
+            {/* Container Principal do Dashboard */}
+            <div className="flex flex-col lg:flex-row gap-8">
+                
+                {/* Bloco Central - Boas Vindas */}
+                <div className="flex-1">
+                    <div className="card-custom p-10 h-full flex flex-col justify-center relative overflow-hidden">
+                        {/* Decoração de fundo */}
+                        <div className="absolute -right-10 -top-10 text-9xl opacity-5 pointer-events-none" style={ { color: 'var(--color-purple)' } }>
+                            <i className="fas fa-brain"></i>
+                        </div>
+                        
+                        <h2 className="text-4xl font-extrabold mb-4" style={ { color: 'var(--color-text)' } }>
+                            Olá, <span className="text-gradient">{userFirstName}</span>!
+                        </h2>
+                        <p className="text-lg text-gray-500 mb-8 max-w-2xl leading-relaxed">
+                            Que bom ter você de volta ao PsicoNote. Como você está se sentindo hoje? Lembre-se que pequenos passos diários constroem grandes jornadas.
+                        </p>
+                        
+                        <div className="flex gap-4">
+                            <button onClick={() => setShowMoodModal(true)} className="btn-primary px-8 py-3 rounded-xl font-bold shadow-lg flex items-center gap-2">
+                                <i className="fas fa-plus"></i> Registrar Humor
+                            </button>
+                            <button onClick={() => setChartMode(true)} className="btn-secondary px-8 py-3 rounded-xl font-bold shadow-md flex items-center gap-2 bg-white" style={ { border: '2px solid var(--color-lilac)', color: 'var(--color-purple)' } }>
+                                <i className="fas fa-chart-line"></i> Relatório de Humor
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Calendário Interativo (Centro Direito) */}
+                <div className="lg:w-96 flex-shrink-0">
+                    <div className="card-custom p-6 h-full border-t-4" style={ { borderTopColor: 'var(--color-purple)' } }>
+                        <div className="flex justify-between items-center mb-6">
+                            <h3 className="text-xl font-bold" style={ { color: 'var(--color-deep-purple)' } }>
+                                {meses[hoje.getMonth()]} {hoje.getFullYear()}
+                            </h3>
+                            <div className="flex gap-2">
+                                <button className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-gray-100 transition text-gray-500 hover:text-purple-700"><i className="fas fa-chevron-left"></i></button>
+                                <button className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-gray-100 transition text-gray-500 hover:text-purple-700"><i className="fas fa-chevron-right"></i></button>
+                            </div>
+                        </div>
+
+                        {/* Dias da Semana */}
+                        <div className="grid grid-cols-7 gap-1 mb-2 text-center text-xs font-bold text-gray-400">
+                            <div>D</div><div>S</div><div>T</div><div>Q</div><div>Q</div><div>S</div><div>S</div>
+                        </div>
+
+                        {/* Grade do Calendário */}
+                        <div className="grid grid-cols-7 gap-2 text-center text-sm">
+                            {diasCalendario.map((dia, index) => (
+                                <div 
+                                    key={index} 
+                                    className={`
+                                        h-10 w-full flex items-center justify-center rounded-lg transition-all cursor-pointer
+                                        ${!dia ? 'opacity-0' : 'hover:bg-purple-50 hover:text-purple-700 font-medium'}
+                                        ${dia === hoje.getDate() ? 'bg-gradient-to-br from-purple-600 to-purple-800 text-white font-bold shadow-md transform hover:scale-105 hover:text-white' : 'text-gray-600'}
+                                    `}
+                                >
+                                    {dia}
+                                    {/* Marcador de evento falso para demonstração */}
+                                    {dia && [5, 12, 18, 25].includes(dia) && dia !== hoje.getDate() && (
+                                        <div className="absolute w-1 h-1 rounded-full mt-6" style={ { background: 'var(--color-light-purple)' } }></div>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                        
+                        <div className="mt-6 pt-4 border-t border-gray-100 text-center">
+                            <a href="#" className="text-sm font-bold transition-colors" style={ { color: 'var(--color-purple)' } }>
+                                Ver todos os eventos <i className="fas fa-arrow-right text-xs ml-1"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            {/* Modal de Registro de Humor */}
+            {showMoodModal && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 animate-fade-in p-4 overflow-y-auto">
+                    <div className="card-custom bg-white w-full max-w-md rounded-2xl shadow-2xl relative my-auto flex-shrink-0">
+                        <button onClick={closeMoodModal} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 z-10 bg-white rounded-full p-1">
+                            <i className="fas fa-times text-xl"></i>
+                        </button>
+                        
+                        <div className="p-6 text-center" style={ { borderBottom: '1px solid var(--color-lilac)' } }>
+                            <div className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-3" style={ { background: 'var(--color-purple)', color: 'white' } }>
+                                <i className="fas fa-smile-beam text-2xl"></i>
+                            </div>
+                            <h2 className="text-xl font-bold" style={ { color: 'var(--color-deep-purple)' } }>Como você está?</h2>
+                            <p className="text-gray-500 text-xs mt-1">Registre seu humor diário para acompanhamento.</p>
+                        </div>
+                        
+                        <div className="p-6">
+                            {moodStatus.msg && (
+                                <div className={`p-3 rounded-lg text-sm font-medium mb-6 ${moodStatus.type === 'success' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
+                                    {moodStatus.msg}
+                                </div>
+                            )}
+
+                            <form onSubmit={saveMood} className="space-y-4">
+                                <div>
+                                    <label className="block text-sm font-bold text-gray-700 mb-1">Data do Registro</label>
+                                    <input 
+                                        type="date" 
+                                        value={moodForm.data}
+                                        max={hojeStr}
+                                        onChange={(e) => setMoodForm({...moodForm, data: e.target.value})}
+                                        className="w-full px-4 py-2 rounded-lg border focus:ring-2 focus:ring-purple-600 outline-none"
+                                        style={ { borderColor: 'var(--color-lilac)', background: '#FDFCFD', color: 'var(--color-text)' } }
+                                        required 
+                                    />
+                                </div>
+                                
+                                <div>
+                                    <label className="block text-sm font-bold text-gray-700 mb-2">Nível de Humor</label>
+                                    <div className="flex justify-between px-1">
+                                        {[
+                                            {n: 1, label: 'Péssimo', icon: 'fa-frown-open', color: 'text-red-500'},
+                                            {n: 2, label: 'Ruim', icon: 'fa-frown', color: 'text-orange-500'},
+                                            {n: 3, label: 'Neutro', icon: 'fa-meh', color: 'text-yellow-500'},
+                                            {n: 4, label: 'Bom', icon: 'fa-smile', color: 'text-green-400'},
+                                            {n: 5, label: 'Excelente', icon: 'fa-grin-stars', color: 'text-green-600'},
+                                        ].map(h => (
+                                            <button 
+                                                key={h.n}
+                                                type="button"
+                                                onClick={() => setMoodForm({...moodForm, nivel: h.n})}
+                                                className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-all flex-1 ${moodForm.nivel === h.n ? 'bg-purple-50 shadow-sm transform scale-110' : 'hover:bg-gray-50 opacity-60 hover:opacity-100'}`}
+                                            >
+                                                <i className={`fas ${h.icon} text-2xl sm:text-3xl ${h.color}`}></i>
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-bold text-gray-700 mb-1">Anotações (Opcional)</label>
+                                    <textarea 
+                                        rows="2"
+                                        value={moodForm.anotacao}
+                                        onChange={(e) => setMoodForm({...moodForm, anotacao: e.target.value})}
+                                        placeholder="O que te fez se sentir assim hoje?"
+                                        className="w-full px-4 py-2 rounded-lg border focus:ring-2 focus:ring-purple-600 outline-none resize-none"
+                                        style={ { borderColor: 'var(--color-lilac)', background: '#FDFCFD', color: 'var(--color-text)' } }
+                                    ></textarea>
+                                </div>
+
+                                <button 
+                                    type="submit" 
+                                    disabled={moodStatus.loading}
+                                    className="btn-primary w-full py-3 rounded-xl font-bold flex justify-center items-center gap-2 mt-2 shadow-md hover:shadow-lg"
+                                >
+                                    {moodStatus.loading ? <i className="fas fa-spinner fa-spin"></i> : <i className="fas fa-save"></i>}
+                                    {moodStatus.loading ? 'Salvando...' : 'Salvar Humor'}
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal de Gráfico Analítico de Humor */}
+            {chartMode && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 animate-fade-in p-4">
+                    <div className="card-custom bg-white w-full max-w-4xl h-[80vh] flex flex-col rounded-2xl overflow-hidden shadow-2xl relative">
+                        
+                        {/* Header Gráfico */}
+                        <div className="p-6 flex justify-between items-center" style={ { borderBottom: '1px solid var(--color-lilac)', background: 'var(--color-white)' } }>
+                            <div>
+                                <h2 className="text-2xl font-bold flex items-center gap-2" style={ { color: 'var(--color-deep-purple)' } }>
+                                    <i className="fas fa-chart-area"></i> Análise de Humor
+                                </h2>
+                                <p className="text-sm text-gray-500">Selecione um período para visualizar suas oscilações.</p>
+                            </div>
+                            <button onClick={() => setChartMode(false)} className="text-gray-400 hover:text-red-500 transition-colors w-10 h-10 rounded-full hover:bg-red-50 flex items-center justify-center">
+                                <i className="fas fa-times text-xl"></i>
+                            </button>
+                        </div>
+                        
+                        {/* Controles de Data */}
+                        <div className="p-6 bg-gray-50 flex flex-wrap gap-4 items-end border-b border-gray-200">
+                            <div>
+                                <label className="block text-xs font-bold text-gray-600 mb-1">Data Inicial</label>
+                                <input 
+                                    type="date" 
+                                    max={hojeStr}
+                                    value={chartDates.start}
+                                    onChange={e => setChartDates({...chartDates, start: e.target.value})}
+                                    className="px-4 py-2 rounded-lg border focus:ring-2 outline-none text-sm bg-white text-gray-800"
+                                    style={ { borderColor: 'var(--color-lilac)' } }
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold text-gray-600 mb-1">Data Final</label>
+                                <input 
+                                    type="date" 
+                                    max={hojeStr}
+                                    value={chartDates.end}
+                                    onChange={e => setChartDates({...chartDates, end: e.target.value})}
+                                    className="px-4 py-2 rounded-lg border focus:ring-2 outline-none text-sm bg-white text-gray-800"
+                                    style={ { borderColor: 'var(--color-lilac)' } }
+                                />
+                            </div>
+                            <button 
+                                onClick={fetchChartData}
+                                className="btn-primary px-6 py-2 rounded-lg text-sm font-bold flex items-center gap-2 shadow-sm h-10"
+                            >
+                                <i className="fas fa-filter"></i> Filtrar
+                            </button>
+                        </div>
+                        
+                        {/* Área do Gráfico */}
+                        <div className="p-6 flex-1 bg-white flex flex-col items-center justify-center relative min-h-0">
+                            {chartData.length > 0 ? (
+                                <div className="w-full h-full relative">
+                                    <canvas ref={canvasRef}></canvas>
+                                </div>
+                            ) : (
+                                <div className="text-center text-gray-400">
+                                    <i className="fas fa-ghost text-6xl mb-4 opacity-50"></i>
+                                    <p className="text-lg font-medium">Nenhum humor registrado neste período.</p>
+                                    <p className="text-sm">Tente aumentar o intervalo de datas.</p>
+                                </div>
+                            )}
+                        </div>
+
+                    </div>
+                </div>
+            )}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {[
+                    { icon: 'chart-line', title: 'Meu Progresso', desc: 'Acompanhe suas evoluções e métricas' },
+                    { icon: 'book-open', title: 'Diário', desc: 'Acesse suas anotações e reflexões' },
+                    { icon: 'video', title: 'Sessões Online', desc: 'Acesse o link da sua próxima consulta' }
+                ].map((item, i) => (
+                    <div key={i} className="card-custom p-6 rounded-xl flex items-center gap-4 cursor-pointer group">
+                        <div className="w-14 h-14 rounded-lg flex items-center justify-center text-2xl text-white shadow-md group-hover:scale-110 transition-transform" style={ { background: 'linear-gradient(135deg, var(--color-purple), var(--color-deep-purple))' } }>
+                            <i className={`fas fa-${item.icon}`}></i>
+                        </div>
+                        <div>
+                            <h3 className="font-bold text-gray-800 group-hover:text-purple-700 transition-colors">{item.title}</h3>
+                            <p className="text-xs text-gray-500 mt-1">{item.desc}</p>
+                        </div>
+                    </div>
+                ))}
+            </div>
+
+        </div>
+    );
+}
+
+// ==========================================
+// COMPONENTE DA LANDING PAGE (DESLOGADO)
+// ==========================================
+function LandingCarousel() {
     const noticias = [
         {% for noticia in noticias %}
         {
@@ -147,6 +632,6 @@ function Carrossel() {
     );
 }
 
-ReactDOM.render(<Carrossel />, document.getElementById('carrossel-app'));
+ReactDOM.render(<App />, document.getElementById('home-app'));
 </script>
 {% endblock %}

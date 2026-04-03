@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Cliente, Noticia, Employee, Project, Task
+from .models import Cliente, Noticia, Employee, Project, Task, PerfilUsuario, RegistroHumor, RegistroHumor
 
 @admin.register(Cliente)
 class ClienteAdmin(admin.ModelAdmin):
@@ -15,6 +15,18 @@ class NoticiaAdmin(admin.ModelAdmin):
     list_filter = ('ativo', 'data_publicacao')
     ordering = ('-ordem', '-data_publicacao')
     list_editable = ('ativo', 'ordem')
+
+@admin.register(PerfilUsuario)
+class PerfilUsuarioAdmin(admin.ModelAdmin):
+    list_display = ('user', 'tipo', 'crp', 'telefone')
+    list_filter = ('tipo',)
+    search_fields = ('user__username', 'crp')
+
+@admin.register(RegistroHumor)
+class RegistroHumorAdmin(admin.ModelAdmin):
+    list_display = ('user', 'data', 'nivel', 'data_registro')
+    list_filter = ('nivel', 'data')
+    search_fields = ('user__username', 'anotacao')
 
 admin.site.register(Employee)
 admin.site.register(Project)

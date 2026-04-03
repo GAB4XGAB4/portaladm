@@ -1,4 +1,5 @@
 from django.db import models
+from django.contrib.auth.models import User
 
 class Cliente(models.Model):
     id = models.AutoField(primary_key=True)
@@ -65,3 +66,49 @@ class Task(models.Model):
 
     def __str__(self):
         return self.title
+
+class PerfilUsuario(models.Model):
+    TIPO_CHOICES = (
+        ('PSICOLOGO','Psicólogo / Psiquiatra'),
+        ('CLIENTE', 'Cliente / Paciente'),
+    )
+    
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    
+    tipo = models.CharField(max_length=20, choices=TIPO_CHOICES, default = 'CLIENTE')
+    
+    crp = models.CharField(max_length=20, blank=True, null=True)
+    telefone = models.CharField(max_length=20, blank=True, null=True)
+    endereco = models.CharField(max_length=255, blank=True, null=True)
+    numero = models.CharField(max_length=10, blank=True, null=True)
+    cep = models.CharField(max_length=10, blank=True, null=True)
+    estado = models.CharField(max_length=2, blank=True, null=True)
+    avatar = models.ImageField(upload_to='avatars/', null=True, blank=True)
+
+    def __str__(self):
+        return f"{self.user.username} - {self.get_tipo_display()}"
+
+class RegistroHumor(models.Model):
+    NIVEIS_HUMOR = (
+        (1, 'Péssimo'),
+        (2, 'Ruim'),
+        (3, 'Neutro'),
+        (4, 'Bom'),
+        (5, 'Excelente'),
+    )
+    
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='registros_humor')
+    data = models.DateField()
+    nivel = models.IntegerField(choices=NIVEIS_HUMOR)
+    anotacao = models.TextField(blank=True, null=True)
+    data_registro = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Registro de Humor"
+        verbose_name_plural = "Registros de Humor"
+        # Garante que o usuário só tenha 1 registro principal de humor por dia para o gráfico
+        unique_together = ('user', 'data')
+        ordering = ['-data']
+
+    def __str__(self):
+        return f"{self.user.username} - {self.data} - {self.get_nivel_display()}"

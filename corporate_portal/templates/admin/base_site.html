@@ -1,0 +1,124 @@
+{% extends "admin/base_site.html" %}
+
+{% block title %}{{ title }} | PsicoNote Admin{% endblock %}
+
+{% block extrastyle %}
+{{ block.super }}
+<style>
+    /* Variáveis Globais (Nosso esquema de cores Light Mode Roxo) */
+    :root {
+        --color-light-purple: #A555EC;
+        --color-purple: #7014C2;
+        --color-deep-purple: #7400AE;
+        --color-lilac: #E0DAE0;
+        --color-white: #FFFFFF;
+        --color-text: #2A2A2A;
+        --primary: var(--color-purple);
+        --secondary: var(--color-deep-purple);
+        --header-color: var(--color-white);
+        --header-branding-color: var(--color-deep-purple);
+        --header-bg: var(--color-white);
+        --header-link-color: var(--color-purple);
+        --breadcrumbs-bg: var(--color-lilac);
+        --breadcrumbs-link-fg: var(--color-deep-purple);
+        --breadcrumbs-fg: var(--color-text);
+        --link-fg: var(--color-purple);
+        --link-hover-fg: var(--color-light-purple);
+        --button-bg: var(--color-purple);
+        --button-hover-bg: var(--color-deep-purple);
+        --default-button-bg: var(--color-deep-purple);
+        --default-button-hover-bg: var(--color-purple);
+        --object-tools-bg: var(--color-purple);
+        --object-tools-hover-bg: var(--color-deep-purple);
+        --selected-bg: rgba(165, 85, 236, 0.1);
+        --selected-row: rgba(165, 85, 236, 0.05);
+    }
+
+    /* Sobrescrever Cabeçalho Base do Admin */
+    #header {
+        background: var(--header-bg);
+        border-bottom: 2px solid var(--color-lilac);
+        color: var(--header-branding-color);
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
+    }
+
+    #branding h1 {
+        color: var(--color-deep-purple);
+        font-weight: 800;
+        letter-spacing: 0.5px;
+        text-transform: uppercase;
+        margin: 0;
+    }
+
+    #header a:link, #header a:visited {
+        color: var(--color-purple);
+        font-weight: bold;
+    }
+
+    #header a:hover {
+        color: var(--color-light-purple);
+    }
+
+    /* Modulo dos Títulos (Apps) */
+    .module h2, .module caption, .inline-group h2 {
+        background: linear-gradient(135deg, var(--color-purple), var(--color-deep-purple));
+        color: var(--color-white);
+        font-weight: 600;
+        border-radius: 6px 6px 0 0;
+    }
+
+    /* Botões Padrões */
+    .button, input[type=submit], input[type=button], .submit-row input, a.button {
+        background: linear-gradient(135deg, var(--color-purple), var(--color-deep-purple));
+        border: none;
+        border-radius: 6px;
+        transition: all 0.3s ease;
+        box-shadow: 0 2px 8px rgba(112, 20, 194, 0.2);
+    }
+
+    .button:hover, input[type=submit]:hover, input[type=button]:hover, .submit-row input:hover {
+        background: linear-gradient(135deg, var(--color-light-purple), var(--color-purple));
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(112, 20, 194, 0.3);
+    }
+
+    /* Campos de Input e Select */
+    input[type=text], input[type=password], input[type=email], input[type=url], input[type=number], input[type=tel], textarea, select, .vTextField {
+        border: 1px solid var(--color-lilac);
+        border-radius: 6px;
+        padding: 6px 10px;
+        transition: border-color 0.3s ease;
+    }
+
+    input[type=text]:focus, input[type=password]:focus, textarea:focus, select:focus, .vTextField:focus {
+        border-color: var(--color-purple);
+    }
+
+    /* Links Gerais */
+    a:link, a:visited {
+        color: var(--color-purple);
+    }
+    
+    a:hover {
+        color: var(--color-light-purple);
+    }
+
+    /* Painel Lateral (Filtros) */
+    #changelist-filter {
+        background: #FDFCFD;
+        border-left: 1px solid var(--color-lilac);
+    }
+
+    #changelist-filter h2 {
+        background: var(--color-lilac);
+        color: var(--color-text);
+    }
+
+</style>
+{% endblock %}
+
+{% block branding %}
+<h1 id="site-name"><a href="{% url 'admin:index' %}">PsicoNote Admin</a></h1>
+{% endblock %}
+
+{% block nav-global %}{% endblock %}

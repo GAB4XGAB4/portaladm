@@ -26,6 +26,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'portal',  # Add your app here
+    'axes',    # Proteção de Força Bruta
 ]
 
 MIDDLEWARE = [
@@ -36,6 +37,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'axes.middleware.AxesMiddleware',  # Middleware para barrar acessos após falhas
 ]
 
 ROOT_URLCONF = 'corporate_portal.urls'
@@ -107,11 +109,38 @@ MEDIA_ROOT = BASE_DIR / 'media'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.0/ref/settings/#default-auto-field
+
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# Internationalization - Português Brasil
-LANGUAGE_CODE = 'pt-br'
-TIME_ZONE = 'America/Sao_Paulo'
-USE_I18N = True
-USE_L10N = True
-USE_TZ = True
+# Configurações de Cibersegurança (django-axes e Sessões)
+# ----------------------------------------------------
+# 1. Proteção contra Força Bruta (django-axes)
+AXES_FAILURE_LIMIT = 5  # Bloqueia após 5 tentativas erradas
+AXES_COOLOFF_TIME = 1   # Tempo de bloqueio de 1 hora
+AXES_LOCKOUT_PARAMETERS = ["ip_address", "username"]  # Bloqueia apenas aquele usuário naquele computador (para que um não trave o outro)
+AXES_LOCKOUT_CALLABLE = "portal.security.custom_lockout_view"  # Tela customizada de bloqueio e JSON
+
+# 2. Segurança de Sessões (Timeout Automático)
+SESSION_COOKIE_AGE = 1800  # Tempo inativo expira a sessão em 30 minutos (em segundos)
+SESSION_SAVE_EVERY_REQUEST = True  # Renova os 30 min cada vez que ele clica no site
+SESSION_EXPIRE_AT_BROWSER_CLOSE = True  # Se fechar o navegador, desloga na hora
+
+# 3. Escudos de Navegador (Security Headers)
+# Diz para o navegador que este site contém informações confidenciais
+SECURE_BROWSER_XSS_FILTER = True  # Ativa o filtro anti-Cross Site Scripting (XSS) nativo do navegador
+SECURE_CONTENT_TYPE_NOSNIFF = True  # Impede ataques que se disfarçam de imagens para rodar vírus
+X_FRAME_OPTIONS = 'DENY'  # Impede "Clickjacking" (outros sites não podem clonar o portal)
+
+# Quando o site for pro ar e tiver HTTPS (Certificado SSL), essas configurações devem ser ativadas
+# SECURE_SSL_REDIRECT = True
+# SESSION_COOKIE_SECURE = True
+# CSRF_COOKIE_SECURE = True
+# SECURE_HSTS_SECONDS = 31536000
+# SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+# SECURE_HSTS_PRELOAD = True
+
+# Backends de Autenticação
+AUTHENTICATION_BACKENDS = [
+    'axes.backends.AxesBackend',  # O segurança do Axes analisa o login primeiro
+    'django.contrib.auth.backends.ModelBackend',
+]

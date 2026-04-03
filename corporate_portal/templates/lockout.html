@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block title %}Acesso Bloqueado | PsicoNote{% endblock %}
+
+{% block content %}
+<div class="min-h-full flex flex-col items-center justify-center p-8">
+    <div class="card-custom max-w-lg p-10 text-center rounded-2xl shadow-xl">
+        <div class="w-24 h-24 mx-auto bg-red-100 rounded-full flex items-center justify-center text-red-600 mb-6 shadow-sm">
+            <i class="fas fa-lock text-5xl"></i>
+        </div>
+        
+        <h1 class="text-3xl font-extrabold mb-4" style="color: var(--color-deep-purple);">Acesso Bloqueado</h1>
+        
+        <div class="bg-red-50 border-l-4 border-red-600 text-red-700 p-4 rounded-lg shadow-sm mb-8 text-left text-sm font-medium">
+            <p class="mb-2"><i class="fas fa-exclamation-triangle mr-2"></i><strong>Alerta de Segurança:</strong> Detectamos várias tentativas de login incorretas na sua conta.</p>
+            <p>Para proteger a privacidade dos seus dados psicológicos e evitar invasões, seu acesso foi bloqueado temporariamente.</p>
+        </div>
+        
+        <p class="text-gray-600 font-semibold text-lg mb-8">
+            Por favor, tente acessar o sistema novamente em <span style="color: var(--color-purple);">1 hora</span>.
+        </p>
+
+        <a href="{% url 'home' %}" class="btn-primary inline-flex px-8 py-3 rounded-xl font-bold shadow-lg items-center gap-2">
+            <i class="fas fa-home"></i> Voltar para a Tela Inicial
+        </a>
+    </div>
+</div>
+{% endblock %}
