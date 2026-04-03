@@ -1,28 +1,468 @@
+{% load static %}
 <!DOCTYPE html>
-<html lang="en">
+<html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Corporate Portal{% endblock %}</title>
-    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    <title>{% block title %}PsicoNote{% endblock %}</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- React & ReactDOM CDN -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <!-- Babel para JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --color-light-purple: #A555EC;
+            --color-purple: #7014C2;
+            --color-deep-purple: #7400AE;
+            --color-lilac: #E0DAE0;
+            --color-white: #FFFFFF;
+            --color-text: #2A2A2A;
+        }
+
+        * {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            background-color: var(--color-white);
+            color: var(--color-text);
+        }
+
+        /* Sidebar Minimalista */
+        .sidebar-mini {
+            width: 65px;
+            background: var(--color-white);
+            border-right: 1px solid var(--color-lilac);
+            transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.6s ease;
+            will-change: width;
+            position: fixed;
+            left: 0;
+            top: 0;
+            height: 100vh;
+            overflow: hidden;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sidebar-mini:hover {
+            width: 250px;
+            box-shadow: 4px 0 24px rgba(112, 20, 194, 0.08);
+        }
+
+        .sidebar-mini .logo-area {
+            padding: 12px;
+            border-bottom: 1px solid var(--color-lilac);
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            min-height: 65px;
+            flex-shrink: 0;
+            position: relative;
+        }
+
+        .logo-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            background: linear-gradient(135deg, var(--color-purple), var(--color-deep-purple));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--color-white);
+            font-size: 22px;
+            flex-shrink: 0;
+            box-shadow: 0 4px 15px rgba(112, 20, 194, 0.2);
+            transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            will-change: transform;
+        }
+
+        .logo-icon-link {
+            text-decoration: none;
+            cursor: pointer;
+            transition: all 0.6s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .logo-icon-link:hover .logo-icon {
+            transform: scale(1.1);
+            box-shadow: 0 6px 20px rgba(112, 20, 194, 0.3);
+        }
+
+        .sidebar-mini:hover .logo-icon {
+            margin-right: 15px;
+        }
+
+        .logo-text {
+            position: absolute;
+            left: 65px;
+            opacity: 0;
+            white-space: nowrap;
+            color: var(--color-deep-purple);
+            font-weight: 800;
+            font-size: 15px;
+            letter-spacing: 0.5px;
+            transition: opacity 0.05s ease;
+            pointer-events: none;
+        }
+
+        .sidebar-mini:hover .logo-text {
+            opacity: 1;
+            transition: opacity 0.5s ease 0.25s;
+        }
+
+        /* Psi Logo SVG */
+        .psi-logo {
+            width: 100%;
+            height: 100%;
+            filter: drop-shadow(0 2px 4px rgba(112, 20, 194, 0.3));
+        }
+
+        /* Menu Items */
+        .sidebar-mini nav {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 12px 10px;
+            gap: 8px;
+            overflow-y: hidden;
+            align-items: flex-start;
+        }
+
+        .menu-item-mini {
+            width: 44px;
+            height: 44px;
+            border-radius: 10px;
+            background: var(--color-white);
+            border: 1px solid transparent;
+            color: var(--color-purple);
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            padding-left: 12px;
+            cursor: pointer;
+            transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1), background 0.3s ease, transform 0.3s ease, border-color 0.3s ease;
+            will-change: width;
+            font-size: 18px;
+            text-decoration: none;
+            flex-shrink: 0;
+            position: relative;
+        }
+
+        .menu-item-mini:hover {
+            background: linear-gradient(135deg, var(--color-purple), var(--color-deep-purple));
+            color: var(--color-white);
+            border-color: var(--color-purple);
+            transform: scale(1.05);
+            box-shadow: 0 4px 12px rgba(112, 20, 194, 0.2);
+        }
+
+        .sidebar-mini:hover .menu-item-mini {
+            width: 100%;
+        }
+
+        .menu-label {
+            position: absolute;
+            left: 50px;
+            opacity: 0;
+            white-space: nowrap;
+            color: var(--color-text);
+            font-size: 14px;
+            font-weight: 600;
+            pointer-events: none;
+            transition: opacity 0.05s ease, color 0.3s ease;
+        }
+
+        .sidebar-mini:hover .menu-label {
+            opacity: 1;
+            transition: opacity 0.5s ease 0.25s, color 0.3s ease;
+        }
+        
+        .menu-item-mini:hover .menu-label {
+            color: var(--color-white);
+        }
+
+        /* Scrollbar */
+        .sidebar-mini::-webkit-scrollbar {
+            display: none;
+        }
+
+        .sidebar-mini {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        /* Main Layout */
+        .main-container {
+            margin-left: 65px;
+            transition: margin-left 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+            will-change: margin-left;
+        }
+
+        .sidebar-mini:hover ~ .main-container {
+            margin-left: 250px;
+        }
+
+        /* Header Styling */
+        .header-top {
+            background: var(--color-white);
+            border-bottom: 1px solid var(--color-lilac);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
+        }
+
+        .btn-login {
+            background: linear-gradient(135deg, var(--color-purple), var(--color-deep-purple));
+            color: var(--color-white);
+            border: none;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(112, 20, 194, 0.3);
+            font-weight: 700;
+        }
+
+        .btn-login:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(112, 20, 194, 0.5);
+            color: var(--color-white);
+        }
+
+        /* Main Content */
+        .main-content {
+            background: #FDFCFD; /* Slightly off-white */
+            color: var(--color-text);
+        }
+
+        /* Cards */
+        .card-custom {
+            background: var(--color-white);
+            border: 1px solid var(--color-lilac);
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
+            border-radius: 12px;
+        }
+
+        .card-custom:hover {
+            border-color: var(--color-purple);
+            box-shadow: 0 8px 24px rgba(112, 20, 194, 0.08);
+            transform: translateY(-4px);
+        }
+
+        /* Gradient Buttons */
+        .btn-primary {
+            background: linear-gradient(135deg, var(--color-purple), var(--color-deep-purple));
+            color: var(--color-white);
+            border: none;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(112, 20, 194, 0.2);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(112, 20, 194, 0.3);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, var(--color-light-purple), var(--color-purple));
+            color: var(--color-white);
+            border: none;
+            font-weight: 600;
+        }
+
+        /* Text Colors */
+        .text-gradient {
+            background: linear-gradient(135deg, var(--color-purple), var(--color-deep-purple));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-shadow: 0 2px 10px rgba(112, 20, 194, 0.1);
+            filter: drop-shadow(0 2px 4px rgba(112, 20, 194, 0.1));
+        }
+
+        /* Inputs */
+        input, textarea {
+            background: var(--color-white) !important;
+            border: 1px solid var(--color-lilac) !important;
+            color: var(--color-text) !important;
+            transition: all 0.3s ease;
+            border-radius: 8px;
+        }
+
+        input:focus, textarea:focus {
+            border-color: var(--color-purple) !important;
+            box-shadow: 0 0 0 3px rgba(112, 20, 194, 0.1) !important;
+            outline: none;
+        }
+
+        input::placeholder {
+            color: #999999 !important;
+        }
+
+        /* Footer */
+        .footer-custom {
+            background: var(--color-white);
+            border-top: 1px solid var(--color-lilac);
+        }
+
+        /* Carrossel */
+        .carousel-container {
+            background: var(--color-white);
+            border: 1px solid var(--color-lilac);
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.03);
+        }
+
+        .carousel-info {
+            background: linear-gradient(135deg, var(--color-purple), var(--color-deep-purple));
+            color: var(--color-white);
+        }
+
+        .indicator {
+            transition: all 0.3s ease;
+        }
+
+        .indicator.active {
+            background: linear-gradient(135deg, var(--color-magenta), var(--color-red));
+            box-shadow: 0 0 10px rgba(183, 16, 120, 0.5);
+        }
+
+        /* Animations */
+        @keyframes glow {
+            0%, 100% { box-shadow: 0 0 5px rgba(183, 16, 120, 0.3); }
+            50% { box-shadow: 0 0 15px rgba(183, 16, 120, 0.6); }
+        }
+
+        .glow-effect {
+            animation: glow 2s ease-in-out infinite;
+        }
+    </style>
 </head>
 <body>
-    <header>
-        <h1>Welcome to the Corporate Portal</h1>
-        <nav>
-            <ul>
-                <li><a href="{% url 'home' %}">Home</a></li>
-                <li><a href="{% url 'about' %}">About</a></li>
-                <li><a href="{% url 'contact' %}">Contact</a></li>
-            </ul>
-        </nav>
-    </header>
-    <main>
-        {% block content %}
-        {% endblock %}
-    </main>
-    <footer>
-        <p>&copy; {{ current_year }} Corporate Portal. All rights reserved.</p>
-    </footer>
+    <div class="flex min-h-screen">
+        <!-- Sidebar Minimalista -->
+        <aside class="sidebar-mini">
+            
+            <!-- Logo -->
+            <div class="logo-area">
+                <a href="{% url 'home' %}" class="logo-icon-link">
+                    <div class="logo-icon">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="psi-logo">
+                            <!-- Background sutil para contraste -->
+                            <circle cx="12" cy="12" r="12" fill="rgba(255, 255, 255, 0.1)"/>
+                            
+                            <!-- Símbolo de Psicologia Customizado -->
+                            <!-- Círculo externo - mais visível -->
+                            <circle cx="12" cy="12" r="10.5" stroke="#FFFFFF" stroke-width="0.8" fill="none" opacity="0.9"/>
+                            <circle cx="12" cy="12" r="10.5" stroke="url(#grad)" stroke-width="0.5" fill="none" opacity="0.7"/>
+                            
+                            <!-- Parte superior: Cérebro/Mente estilizado - mais espesso -->
+                            <path d="M 12 2.5 Q 7.5 5.5 7.5 9.5 Q 7.5 11.5 8.5 12.5" stroke="url(#grad)" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="1"/>
+                            <path d="M 12 2.5 Q 16.5 5.5 16.5 9.5 Q 16.5 11.5 15.5 12.5" stroke="url(#grad)" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="1"/>
+                            
+                            <!-- Detalhe branco para clareza nos arcos -->
+                            <path d="M 12 2.5 Q 7.5 5.5 7.5 9.5 Q 7.5 11.5 8.5 12.5" stroke="#FFFFFF" stroke-width="1" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.6"/>
+                            <path d="M 12 2.5 Q 16.5 5.5 16.5 9.5 Q 16.5 11.5 15.5 12.5" stroke="#FFFFFF" stroke-width="1" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.6"/>
+                            
+                            <!-- Haste central - bem visível -->
+                            <line x1="12" y1="12" x2="12" y2="20.5" stroke="url(#grad)" stroke-width="2.2" stroke-linecap="round" opacity="1"/>
+                            <line x1="12" y1="12" x2="12" y2="20.5" stroke="#FFFFFF" stroke-width="1" stroke-linecap="round" opacity="0.5"/>
+                            
+                            <!-- Ondas de energia (bem-estar mental) - lado esquerdo - mais claras -->
+                            <path d="M 5.5 14 Q 6.8 12.5 8 14 Q 9.2 15.5 10.5 14" stroke="url(#grad)" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.95"/>
+                            <path d="M 4.5 17 Q 6.2 15 8 17 Q 9.8 19 11.5 17" stroke="url(#grad)" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.85"/>
+                            
+                            <!-- Detalhe branco para melhor contraste nas ondas -->
+                            <path d="M 5.5 14 Q 6.8 12.5 8 14 Q 9.2 15.5 10.5 14" stroke="#FFFFFF" stroke-width="0.7" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.5"/>
+                            <path d="M 4.5 17 Q 6.2 15 8 17 Q 9.8 19 11.5 17" stroke="#FFFFFF" stroke-width="0.7" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.4"/>
+                            
+                            <!-- Ondas de energia (bem-estar mental) - lado direito - mais claras -->
+                            <path d="M 18.5 14 Q 17.2 12.5 16 14 Q 14.8 15.5 13.5 14" stroke="url(#grad)" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.95"/>
+                            <path d="M 19.5 17 Q 17.8 15 16 17 Q 14.2 19 12.5 17" stroke="url(#grad)" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.85"/>
+                            
+                            <!-- Detalhe branco para melhor contraste nas ondas -->
+                            <path d="M 18.5 14 Q 17.2 12.5 16 14 Q 14.8 15.5 13.5 14" stroke="#FFFFFF" stroke-width="0.7" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.5"/>
+                            <path d="M 19.5 17 Q 17.8 15 16 17 Q 14.2 19 12.5 17" stroke="#FFFFFF" stroke-width="0.7" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.4"/>
+                            
+                            <!-- Ponto no topo (essência/energia) - maior e mais visível -->
+                            <circle cx="12" cy="2.5" r="1.5" fill="url(#grad)" opacity="1"/>
+                            <circle cx="12" cy="2.5" r="0.8" fill="#FFFFFF" opacity="0.7"/>
+                            
+                            <!-- Gradiente para os strokes -->
+                            <defs>
+                                <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                                    <stop offset="0%" style="stop-color:#A555EC;stop-opacity:1" />
+                                    <stop offset="100%" style="stop-color:#7400AE;stop-opacity:1" />
+                                </linearGradient>
+                            </defs>
+                        </svg>
+                    </div>
+                </a>
+                <div class="logo-text">PSICONOTE</div>
+            </div>
+            
+            <!-- Navigation Menu -->
+            <nav>
+                <a href="{% url 'home' %}" class="menu-item-mini" title="Home">
+                    <i class="fas fa-home"></i>
+                    <span class="menu-label">Home</span>
+                </a>
+                <a href="#" class="menu-item-mini" title="Analítico">
+                    <i class="fas fa-chart-line"></i>
+                    <span class="menu-label">Analítico</span>
+                </a>
+                <a href="#" class="menu-item-mini" title="Equipe">
+                    <i class="fas fa-users"></i>
+                    <span class="menu-label">Equipe</span>
+                </a>
+                <a href="#" class="menu-item-mini" title="Projetos">
+                    <i class="fas fa-briefcase"></i>
+                    <span class="menu-label">Projetos</span>
+                </a>
+                <a href="#" class="menu-item-mini" title="Mensagens">
+                    <i class="fas fa-envelope"></i>
+                    <span class="menu-label">Mensagens</span>
+                </a>
+                <a href="#" class="menu-item-mini" title="Relatórios">
+                    <i class="fas fa-file-alt"></i>
+                    <span class="menu-label">Relatórios</span>
+                </a>
+                <a href="#" class="menu-item-mini" title="Configurações">
+                    <i class="fas fa-cog"></i>
+                    <span class="menu-label">Configurações</span>
+                </a>
+            </nav>
+        </aside>
+
+        <!-- Main Container -->
+        <div class="main-container flex-1 flex flex-col">
+            <!-- Header -->
+            <header class="header-top px-8 py-4 flex justify-between items-center">
+                <div>
+                    <h1 class="text-3xl font-bold text-gradient">PsicoNote</h1>
+                </div>
+                <a href="{% url 'login' %}" class="btn-login inline-flex items-center gap-2 px-6 py-3 rounded-lg font-medium">
+                    <i class="fas fa-sign-in-alt"></i>
+                    Login
+                </a>
+            </header>
+
+            <!-- Main Content Area -->
+            <main class="main-content flex-1 overflow-y-auto p-8">
+                {% block content %}
+                {% endblock %}
+            </main>
+
+            <!-- Footer -->
+            <footer class="footer-custom text-center py-6 px-8 text-sm text-gray-400">
+                <p>&copy; 2026 PsicoNote. Todos os direitos reservados.</p>
+            </footer>
+        </div>
+    </div>
 </body>
 </html>

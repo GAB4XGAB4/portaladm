@@ -1,0 +1,153 @@
+{% extends 'base.html' %}
+
+{% block title %}Login - PsicoNote{% endblock %}
+
+{% block content %}
+<div id="login-app"></div>
+
+<script type="text/babel">
+const { useState } = React;
+
+function LoginForm() {
+    const [email, setEmail] = useState('');
+    const [senha, setSenha] = useState('');
+    const [rememberMe, setRememberMe] = useState(false);
+    const [showPassword, setShowPassword] = useState(false);
+
+    const handleSubmit = (e) => {
+        e.preventDefault();
+        console.log('Login:', { email, senha, rememberMe });
+        alert('Sistema de autenticação em desenvolvimento...');
+    };
+
+    return (
+        <div className="min-h-full flex items-center justify-center">
+            <div className="w-full max-w-md">
+                {/* Card de Login */}
+                <div className="card-custom rounded-2xl overflow-hidden border border-opacity-50">
+                    {/* Header do Card */}
+                    <div className="p-8 text-white text-center" style={ { background: 'linear-gradient(135deg, #A555EC, #7400AE)' } }>
+                        <div className="flex justify-center mb-4">
+                            <div className="w-16 h-16 bg-white bg-opacity-20 rounded-full flex items-center justify-center border-2 border-white border-opacity-30">
+                                <i className="fas fa-user-circle text-4xl"></i>
+                            </div>
+                        </div>
+                        <h1 className="text-3xl font-bold">Bem-vindo</h1>
+                        <p className="text-purple-200 mt-2">Acesse sua conta do portal</p>
+                    </div>
+
+                    {/* Formulário */}
+                    <form onSubmit={handleSubmit} className="p-8 space-y-6">
+                        {/* Email */}
+                        <div>
+                            <label className="block text-sm font-medium text-purple-300 mb-2">
+                                <i className="fas fa-envelope mr-2"></i>
+                                Email ou Usuário
+                            </label>
+                            <input
+                                type="text"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                placeholder="seu.email@example.com"
+                                className="w-full px-4 py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-600 transition"
+                                required
+                            />
+                        </div>
+
+                        {/* Senha */}
+                        <div>
+                            <label className="block text-sm font-medium text-purple-300 mb-2">
+                                <i className="fas fa-lock mr-2"></i>
+                                Senha
+                            </label>
+                            <div className="relative">
+                                <input
+                                    type={showPassword ? 'text' : 'password'}
+                                    value={senha}
+                                    onChange={(e) => setSenha(e.target.value)}
+                                    placeholder="••••••••"
+                                    className="w-full px-4 py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-600 transition"
+                                    required
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPassword(!showPassword)}
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-purple-300 hover:text-purple-200 transition"
+                                >
+                                    <i className={`fas fa-eye${showPassword ? '' : '-slash'}`}></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Lembrar de Mim */}
+                        <div className="flex items-center">
+                            <input
+                                type="checkbox"
+                                id="rememberMe"
+                                checked={rememberMe}
+                                onChange={(e) => setRememberMe(e.target.checked)}
+                                className="w-4 h-4 rounded focus:ring-2 focus:ring-purple-600"
+                            />
+                            <label htmlFor="rememberMe" className="ml-3 text-sm text-gray-300">
+                                Lembrar-me neste dispositivo
+                            </label>
+                        </div>
+
+                        {/* Botão de Login */}
+                        <button
+                            type="submit"
+                            className="btn-login w-full py-3 px-4 font-bold rounded-lg hover:shadow-lg transition transform hover:scale-[1.02] flex items-center justify-center gap-2"
+                        >
+                            <i className="fas fa-sign-in-alt"></i>
+                            Entrar
+                        </button>
+
+                        {/* Recuperação de Senha */}
+                        <div className="text-center">
+                            <a href="#" className="text-sm text-purple-400 hover:text-purple-300 font-medium transition">
+                                Esqueceu sua senha?
+                            </a>
+                        </div>
+
+                        {/* Divider */}
+                        <div className="relative">
+                            <div className="absolute inset-0 flex items-center">
+                                <div className="w-full border-t border-purple-600 border-opacity-30"></div>
+                            </div>
+                            <div className="relative flex justify-center text-sm">
+                                <span className="px-2 bg-opacity-0 text-purple-400">ou</span>
+                            </div>
+                        </div>
+
+                        {/* Cadastro */}
+                        <div className="text-center">
+                            <p className="text-sm text-gray-400">
+                                Não tem uma conta?{' '}
+                                <a href="#" className="text-purple-400 hover:text-purple-300 font-medium transition">
+                                    Cadastre-se aqui
+                                </a>
+                            </p>
+                        </div>
+                    </form>
+
+                    {/* Footer */}
+                    <div className="bg-gradient-to-r from-purple-900 to-purple-800 bg-opacity-50 px-8 py-4 border-t border-purple-600 border-opacity-30 text-center text-xs text-purple-300">
+                        <p>🔒 Protegido por encriptação de dados avançada</p>
+                    </div>
+                </div>
+
+                {/* Links de Suporte */}
+                <div className="text-center mt-6 space-y-2 text-sm text-purple-300">
+                    <a href="{% url 'home' %}" className="block text-purple-400 hover:text-purple-300 font-medium transition">
+                        <i className="fas fa-arrow-left mr-2"></i>Voltar para Home
+                    </a>
+                    <a href="#" className="block text-gray-500 hover:text-gray-400 transition">Contato com Suporte</a>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+ReactDOM.render(<LoginForm />, document.getElementById('login-app'));
+</script>
+{% endblock %}
